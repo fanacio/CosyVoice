@@ -503,6 +503,9 @@ class Qwen2LM(TransformerLM):
 
     @torch.inference_mode()
     def inference_wrapper(self, lm_input, sampling, min_len, max_len, uuid):
+        if hasattr(self, 'vllm_bridge'):
+            yield from self.vllm_bridge.generate(self, lm_input, sampling, min_len, max_len, uuid)
+            return
         if hasattr(self, 'vllm'):
             from vllm import SamplingParams, RequestOutput
             sampling_params = SamplingParams(top_k=sampling,

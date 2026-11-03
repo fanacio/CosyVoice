@@ -1,0 +1,47 @@
+diff --git a/matcha/utils/__init__.py b/matcha/utils/__init__.py
+--- a/matcha/utils/__init__.py
++++ b/matcha/utils/__init__.py
+@@ -1,5 +1,14 @@
+-from matcha.utils.instantiators import instantiate_callbacks, instantiate_loggers
+-from matcha.utils.logging_utils import log_hyperparameters
+-from matcha.utils.pylogger import get_pylogger
+-from matcha.utils.rich_utils import enforce_tags, print_config_tree
+-from matcha.utils.utils import extras, get_metric_value, task_wrapper
++# Import training utilities only when requested; audio inference does not need Lightning.
++from importlib import import_module
++_EXPORTS = {
++ "instantiate_callbacks": "instantiators", "instantiate_loggers": "instantiators",
++ "log_hyperparameters": "logging_utils", "get_pylogger": "pylogger",
++ "enforce_tags": "rich_utils", "print_config_tree": "rich_utils",
++ "extras": "utils", "get_metric_value": "utils", "task_wrapper": "utils",
++}
++def __getattr__(name):
++ if name not in _EXPORTS:
++  raise AttributeError(name)
++ value = getattr(import_module("matcha.utils." + _EXPORTS[name]), name)
++ globals()[name] = value
++ return value
+diff --git a/matcha/utils/pylogger.py b/matcha/utils/pylogger.py
+--- a/matcha/utils/pylogger.py
++++ b/matcha/utils/pylogger.py
+@@ -1,6 +1,18 @@
+ import logging
+ 
+-from lightning.pytorch.utilities import rank_zero_only
++try:
++    from lightning.pytorch.utilities import rank_zero_only
++except ModuleNotFoundError as error:
++    if error.name != "lightning":
++        raise
++    import functools
++    import os
++    def rank_zero_only(function):
++        @functools.wraps(function)
++        def wrapper(*args, **kwargs):
++            if int(os.environ.get("RANK", "0")) == 0:
++                return function(*args, **kwargs)
++        return wrapper
+ 
+ 
+ def get_pylogger(name: str = __name__) -> logging.Logger:
+

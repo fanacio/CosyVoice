@@ -226,6 +226,9 @@ class CosyVoice3(CosyVoice2):
 
 
 def AutoModel(**kwargs):
+    if kwargs.pop('device', None) == 'npu':
+        from cosyvoice.runtime.ascend.model import AscendCosyVoice3
+        return AscendCosyVoice3(**kwargs)
     if not os.path.exists(kwargs['model_dir']):
         kwargs['model_dir'] = snapshot_download(kwargs['model_dir'])
     if os.path.exists('{}/cosyvoice.yaml'.format(kwargs['model_dir'])):

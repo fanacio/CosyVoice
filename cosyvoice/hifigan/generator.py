@@ -231,6 +231,9 @@ class SineGen2(torch.nn.Module):
         return uv
 
     def _f02sine(self, f0_values):
+        if f0_values.device.type == 'npu':
+            from cosyvoice.runtime.ascend.acoustic import npu_f02sine
+            return npu_f02sine(self, f0_values)
         """ f0_values: (batchsize, length, dim)
             where dim indicates fundamental tone and overtones
         """
@@ -712,6 +715,9 @@ class CausalHiFTGenerator(HiFTGenerator):
 
     @torch.inference_mode()
     def inference(self, speech_feat: torch.Tensor, finalize: bool = True) -> torch.Tensor:
+        if speech_feat.device.type == 'npu':
+            from cosyvoice.runtime.ascend.acoustic import npu_hift_inference
+            return npu_hift_inference(self, speech_feat, finalize)
         # mel->f0 NOTE f0_predictor precision is crucial for causal inference, move self.f0_predictor to cpu if necessary
         self.f0_predictor.to(torch.float64)
         f0 = self.f0_predictor(speech_feat.to(torch.float64), finalize=finalize).to(speech_feat)
